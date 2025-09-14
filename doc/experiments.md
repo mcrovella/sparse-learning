@@ -1,6 +1,6 @@
 ## Model
 
-We start with the model from "Toy Models of Superposition.  Ie:
+We start with the model from [Toy Models of Superposition.](https://transformer-circuits.pub/2022/toy_model/index.html) Ie:
 
 $$ h = Wx $$
 $$ x' = \operatorname{ReLU}(W^\top h + b) $$
@@ -10,12 +10,15 @@ with the original loss function as
 $$ L_1 = \sum_x \sum_i I_i (x_i - x'_i)^2 $$
 
 Quoting from the paper:
+
 >The input vectors $x$ are synthetic data intended to simulate the properties we believe the true underlying features of our task have. We consider each dimension $x_i$ to be a "feature" Each one has an associated sparsity $S_i$ and importance $I_i$. We let $x_i = 0$ with probability $S_i$, but it is otherwise uniformly distributed between $[0, 1]$.
 >In practice, we focus on the case where all features have the same sparsity.
 
 The model has $n$ features and $m$ internal dimensions ($W \in \mathbb{R}^{m\times n})$
 
 ## Behavior of the Model
+
+The [paper](https://transformer-circuits.pub/2022/toy_model/index.html) illustrates a number of phenomena that emerge from this model:
 
 1. When features are very dense, the model only represents the $m$ most important features.  It does so by constructing $W$ having its first $m$ columns orthogonal.   This allows perfect reconstruction of the top $m$ features, but nothing else.
 1. As features grow sparser, the model starts to represent more features, putting features into superposition.
@@ -34,9 +37,11 @@ In the above model the feature dictionary is $W$.  Assume that we decide the hea
 
 We now extend the model to incorporate an objective similar to what an attention does in a transformer.
 
-We treat the pseudo-attention head as having the following objective.  We assume certain pairs of features are "of interest" to the head.  Define a function $s(h, g)$ where $h = Wx$ and $g = Wy$ are internal representations of $x$ and $y$.  Define
+We treat the pseudo-attention head as having the following objective.  We assume certain pairs of features are "of interest" to the head.  Define a function $s(h, g)$ where $h = Wx$ and $g = Wy$ are internal representations of $x$ and $y$.  Choose a particular $(i, j)$ feature combination.  Then define
 $$ s(h, g) = 1 \iff x_i > 0, y_j > 0, \text{ and } 0 \text{ otherwise } $$  
 This function represents the "target logit" that the pseudo-head should output when presented with two tokens.
+
+(Other options: $s(h, g) = x_i x_j$ for $(i, j)$ only.   Also consider different target weights : 2, 3, etc)
 
 The head is defined by matrices $A, B \in \mathbb{R}^{r\times m}$.  Given $h, g$, the pseudo-head calculates predicted logits:
 
@@ -58,9 +63,12 @@ Define $\Omega = A^\top B$.
     * Need good, thorough plots and visualizations of this. 
 1. What happens during training?   At what point during training do SVs show alignment?  Before or after $W$ columns become orthogonal?
 1. In the $m = r$ regime, with low sparsity, can all $m$ features be recovered by $\Omega$?  What happens when the head dimension is lower than the representation dimension ($r < m$)?   Which features get represented, or does something more tricky happen, like one slice works for two dimensions?
+1. When one match is more important than another, is this reflected in the singular values?  ie, say $s(x, y) = 2$ for some token pair, compare to one for some other token pair.  [Note: check code of model to make sure this is correctly handled.]
 1. As sparsity declines, features organize into a tegum product of simplices.  
     1. When the head attends to features in different subspaces, do SVs span the subspaces?   If there are not enough SVs, do they allocate themselves to separate subspaces?
-    1. When the head attends to features in the same subspace (ie non-orthogonal features), how do SVs organize?
+    1. When the head attends to features in the same subspace (ie non-orthogonal features), how do SVs organize?  Hypothesis: the need to pay attention to features that are non-orthogonal will shift those features to become orthogonal, and allocate distinct SVs to them.  In other words, attn heads encourage orthogonal representations among the features they attend to.  This sheds light on how transformers affect feature representations. 
+    1. Consider two features in antipodal superposition.   Does attending to one of the features destroy the grouping?  Does attending to both features destroy the grouping?   What about three features in a simplex arrangement?
+1. When a head attends to multiple features paired with a single feature, does the singular vector have components corresponding to all the features?
 
 The latter experiments depend on getting features to self-organize in a particular way.  This may be hard when also training the pseudo-head.   Consider breaking the model into two pieces: first train the representations, then train the heads.  This should be as easy as putting a switch on the optimize() function.
 
