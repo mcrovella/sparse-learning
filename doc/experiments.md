@@ -38,10 +38,10 @@ In the above model the feature dictionary is $W$.  Assume that we decide the hea
 We now extend the model to incorporate an objective similar to what an attention does in a transformer.
 
 We treat the pseudo-attention head as having the following objective.  We assume certain pairs of features are "of interest" to the head.  Define a function $s(h, g)$ where $h = Wx$ and $g = Wy$ are internal representations of $x$ and $y$.  Choose a particular $(i, j)$ feature combination.  Then define
-$$ s(h, g) = 1 \iff x_i > 0, y_j > 0, \text{ and } 0 \text{ otherwise } $$  
-This function represents the "target logit" that the pseudo-head should output when presented with two tokens.
+$$ s(h, g) = t_{ij} x_i y_j \iff x_i > 0, y_j > 0, \text{ and } 0 \text{ otherwise } $$  
+The value $t_{ij} x_i y_j$ represents the "target logit" that the pseudo-head should output when presented with two tokens.  
 
-(Other options: $s(h, g) = x_i x_j$ for $(i, j)$ only.   Also consider different target weights : 2, 3, etc)
+It's also possible to simply define $s(h, g) = t_{ij}$, making the target logit independent of the feature strength.  Results are similar. 
 
 The head is defined by matrices $A, B \in \mathbb{R}^{r\times m}$.  Given $h, g$, the pseudo-head calculates predicted logits:
 
@@ -59,11 +59,17 @@ $$ L = L_1 + \lambda L_2. $$
 
 Define $\Omega = A^\top B$. 
 
-1. Do singular vectors of $\Omega$ recover the feature representations?   Short answer, at least in simple cases tried so far: yes.  Longer answer: when sparsity is low, such that top $m$ features are orthogonally represented, singular vectors can recover representations of features from the top $m$ group.
+1. Do singular vectors of $\Omega$ recover the feature representations?   Short answer, at least in simple cases tried so far: yes.  
+
+    Longer answer: when sparsity is low, such that top $m$ features are orthogonally represented, singular vectors can recover representations of features from the top $m$ group.
     * Need good, thorough plots and visualizations of this. 
+
 1. What happens during training?   At what point during training do SVs show alignment?  Before or after $W$ columns become orthogonal?
 1. In the $m = r$ regime, with low sparsity, can all $m$ features be recovered by $\Omega$?  What happens when the head dimension is lower than the representation dimension ($r < m$)?   Which features get represented, or does something more tricky happen, like one slice works for two dimensions?
-1. When one match is more important than another, is this reflected in the singular values?  ie, say $s(x, y) = 2$ for some token pair, compare to one for some other token pair.  [Note: check code of model to make sure this is correctly handled.]
+1. When one match is more important than another, is this reflected in the singular values?  ie, say $s(x, y) = 2$ for some token pair, compare to one for some other token pair.  
+
+    Answer: yes, as long as features are not represented in superposition with other features, singular values will reflect the target logit value $t_{ij}$.
+
 1. As sparsity declines, features organize into a tegum product of simplices.  
     1. When the head attends to features in different subspaces, do SVs span the subspaces?   If there are not enough SVs, do they allocate themselves to separate subspaces?
     1. When the head attends to features in the same subspace (ie non-orthogonal features), how do SVs organize?  Hypothesis: the need to pay attention to features that are non-orthogonal will shift those features to become orthogonal, and allocate distinct SVs to them.  In other words, attn heads encourage orthogonal representations among the features they attend to.  This sheds light on how transformers affect feature representations. 
