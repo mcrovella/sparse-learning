@@ -60,7 +60,7 @@
   % W -> g (arrow leaves W lower, label Wy)
   \coordinate (Wexit) at ($(W.east)+(0,-1.0)$);
   \draw[arrow] (Wexit) .. controls +(2,-0.5) and +(-2,1.0) .. (g.west);
-  \node[anchor=east] at ($(Wexit)!0.5!(g.west)+(-0.2,-0.4)$) {$Wy$};
+  \node[anchor=east] at ($(Wexit)!0.5!(g.west)+(0,-0.4)$) {$Wy$};
 
   % h -> A (curved arrow into midpoint of sq1)
   \coordinate (hexit) at ($(h.east)+(0,-1.0)$);
